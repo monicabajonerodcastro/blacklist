@@ -1,0 +1,59 @@
+version: 0.2
+
+env:
+  variables:
+    DB_HOST: "blacklistdb.c9ejxbhytnik.us-east-1.rds.amazonaws.com"
+    DB_PORT: "5432"
+    DB_NAME: "blacklist-db"
+    DB_USER: "postgres"
+    DB_PASSWORD: "postgres"
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+    commands:
+      - pip3 install pytest
+      - pip3 install Faker
+      - pip3 install marshmallow
+      - pip3 install SQLAlchemy
+      - pip3 install psycopg2
+  pre_build:
+    commands:
+      - python -m pytest --junitxml=pytest_reports/pytest_report.xml
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 678574623569.dkr.ecr.us-east-1.amazonaws.com
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...          
+      - docker build -t blacklist_app .
+      - docker tag blacklist_app:latest 678574623569.dkr.ecr.us-east-1.amazonaws.com/blacklist_app:latest
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image ...
+      - docker push 678574623569.dkr.ecr.us-east-1.amazonaws.com/blacklist_app:latest
+      - echo Writing Image Definitions file...
+      - printf '[{"name":"Container-blacklist","imageUri":"678574623569.dkr.ecr.us-east-1.amazonaws.com/blacklist_app:latest"}]' > imagedefinitions.json
+      - printf '{"ImageURI":"678574623569.dkr.ecr.us-east-1.amazonaws.com/blacklist_app:latest"}' > imageDetail.json
+      - cat imagedefinitions.json 
+artifacts:
+  files:
+    - '**/*'
+    - imagedefinitions.json
+    - imageDetail.json
+  secondary-artifacts:
+    DefinitionArtifact:
+      files:
+        - appspec.yaml
+        - taskdef.json
+    ImageArtifact:
+      files:
+        - imageDetail.json
+reports:
+  pytest_reports:
+    files:
+      - pytest_report.xml
+    base-directory: pytest_reports/
+    file-format: JUNITXML

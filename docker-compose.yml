@@ -1,0 +1,22 @@
+version: '3.6'
+
+networks:
+  blacklist_net:
+services:
+  blacklist-service:
+    environment:
+      PYTHONUNBUFFERED: 1  
+      DB_HOST : "blacklistdb.c9ejxbhytnik.us-east-1.rds.amazonaws.com"
+      DB_PORT : "5432"
+      DB_NAME: "blacklist-db"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgres"
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+    - "5000:5000"
+    networks:
+      - blacklist_net
+
+      
